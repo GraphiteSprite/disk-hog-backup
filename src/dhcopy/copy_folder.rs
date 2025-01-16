@@ -1,6 +1,7 @@
 use std::fs;
 use std::io;
 use std::path::Path;
+use crate::dhcopy::copy_file::copy_file;
 
 /// Recursively copies the contents of a source folder to a destination folder.
 pub fn copy_folder(source: &str, dest: &str) -> io::Result<()> {
@@ -18,7 +19,7 @@ pub fn copy_folder(source: &str, dest: &str) -> io::Result<()> {
             copy_folder(path.to_str().unwrap(), dest_path.to_str().unwrap())?;
         } else {
             // Copy individual files
-            fs::copy(&path, &dest_path)?;
+            copy_file(&path, &dest_path)?;
         }
     }
     Ok(())

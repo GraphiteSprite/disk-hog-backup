@@ -1,11 +1,16 @@
+#[cfg(test)]
 use chrono::{DateTime, Utc};
+#[cfg(test)]
 use rand::Rng;
+#[cfg(test)]
 use std::env;
+#[cfg(test)]
 use std::fs::{self, File};
+#[cfg(test)]
 use std::io::{self, Read};
+#[cfg(test)]
 use std::path::Path;
 
-// Only include these functions when running tests
 #[cfg(test)]
 pub fn create_tmp_folder(prefix: &str) -> io::Result<String> {
     let mut rng = rand::thread_rng();

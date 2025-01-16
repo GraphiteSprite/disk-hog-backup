@@ -29,6 +29,7 @@ struct Args {
 }
 
 fn main() {
+    env_logger::init(); // Initialize logger for the application
     let args = Args::parse();
 
     let options = BackupOptions {
@@ -43,4 +44,6 @@ fn main() {
             process::exit(1);
         }
     }
+       // Your application code here
+       log::info!("Application started");
 }
