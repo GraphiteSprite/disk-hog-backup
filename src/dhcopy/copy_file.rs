@@ -31,6 +31,11 @@ fn test_copy() -> io::Result<()> {
 	Ok(())
 }
 
+// copy_file.rs - Add hard linking support
 fn copy_file(source: &Path, dest: &Path) -> io::Result<u64> {
-	fs::copy(source, dest)
+    // Try to create hard link first
+    match fs::hard_link(source, dest) {
+        Ok(_) => Ok(fs::metadata(source)?.len()),
+        Err(_) => fs::copy(source, dest) // Fall back to regular copy
+    }
 }

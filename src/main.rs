@@ -1,102 +1,46 @@
-// src/main.rs
-use clap::{Parser, Subcommand};
-use disk_hog_backup::{BackupConfig, BackupManager};
-use std::path::PathBuf;
+mod backup;
+mod backup_sets;
+mod dhcopy;
+mod test_helpers;
+
+use clap::Parser;
+use std::process;
+use crate::backup::backup::{backup, BackupOptions};
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
-struct Cli {
-    #[command(subcommand)]
-    command: Commands,
+#[command(name = "diskhog")]
+#[command(about = "A tool for backing up directories", long_about = None)]
+struct Args {
+    /// Source folder to back up
+    #[arg(short, long)]
+    source: String,
+
+    /// Destination folder for backups
+    #[arg(short, long)]
+    destination: String,
+
+    /// Maximum space to use in GB (optional)
+    #[arg(short, long)]
+    max_space: Option<u64>,
+
+    /// Validate checksums during backup
+    #[arg(short, long)]
+    validate: bool,
 }
 
-#[derive(Subcommand)]
-enum Commands {
-    /// Create a new backup
-    Backup {
-        /// Source directory to backup
-        #[arg(short, long)]
-        source: PathBuf,
+fn main() {
+    let args = Args::parse();
 
-        /// Destination directory for backups
-        #[arg(short, long)]
-        dest: PathBuf,
+    let options = BackupOptions {
+        max_space: args.max_space.map(|gb| gb * 1024 * 1024 * 1024),
+        validate_checksums: args.validate,
+    };
 
-        /// Maximum space to use (in GB)
-        #[arg(short, long, default_value = "1000")]
-        max_space: u64,
-    },
-
-    /// Validate existing backups
-    Validate {
-        /// Backup root directory
-        #[arg(short, long)]
-        backup_root: PathBuf,
-    },
-
-    /// List existing backups
-    List {
-        /// Backup root directory
-        #[arg(short, long)]
-        backup_root: PathBuf,
-    },
-}
-
-fn main() -> std::io::Result<()> {
-    let cli = Cli::parse();
-
-    match cli.command {
-        Commands::Backup { source, dest, max_space } => {
-            let config = BackupConfig {
-                source_dir: source,
-                backup_root: dest,
-                max_space: max_space * 1024 * 1024 * 1024, // Convert GB to bytes
-            };
-
-            let mut manager = BackupManager::new(config)?;
-            let backup_info = manager.create_backup()?;
-            println!("Backup created successfully!");
-            println!("Total size: {} bytes", backup_info.total_size);
-            println!("Files backed up: {}", backup_info.files.len());
-        }
-
-        Commands::Validate { backup_root } => {
-            let config = BackupConfig {
-                source_dir: PathBuf::new(), // Not needed for validation
-                backup_root,
-                max_space: 0, // Not needed for validation
-            };
-
-            let manager = BackupManager::new(config)?;
-            let issues = manager.validate_backups()?;
-            
-            if issues.is_empty() {
-                println!("All backups are valid!");
-            } else {
-                println!("Found {} issues:", issues.len());
-                for (path, issue) in issues {
-                    println!("{}: {}", path.display(), issue);
-                }
-            }
-        }
-
-        Commands::List { backup_root } => {
-            let config = BackupConfig {
-                source_dir: PathBuf::new(), // Not needed for listing
-                backup_root,
-                max_space: 0, // Not needed for listing
-            };
-
-            let manager = BackupManager::new(config)?;
-            println!("Available backups:");
-            for backup in manager.backups {
-                println!("Date: {}", backup.date);
-                println!("Size: {} bytes", backup.total_size);
-                println!("Files: {}", backup.files.len());
-                println!("---");
-            }
+    match backup(&args.source, &args.destination, Some(options)) {
+        Ok(set_name) => println!("Backup successful: created set {}", set_name),
+        Err(e) => {
+            eprintln!("Backup failed: {}", e);
+            process::exit(1);
         }
     }
-
-    Ok(())
 }
