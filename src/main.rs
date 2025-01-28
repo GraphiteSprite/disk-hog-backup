@@ -1,11 +1,13 @@
-mod backup;
+mod backup {
+    pub mod backup_impl;
+}
 mod backup_sets;
 mod dhcopy;
 mod test_helpers;
 
 use clap::Parser;
 use std::process;
-use crate::backup::{backup, BackupOptions};
+use crate::backup::backup_impl::{backup_with_options, BackupOptions};
 
 #[derive(Parser)]
 #[command(name = "diskhog")]
@@ -32,18 +34,21 @@ fn main() {
     env_logger::init(); // Initialize logger for the application
     let args = Args::parse();
 
+    log::info!("Application started with arguments: source='{}', destination='{}', max_space={:?}, validate={}", 
+        args.source, args.destination, args.max_space, args.validate);
+
     let options = BackupOptions {
         max_space: args.max_space.map(|gb| gb * 1024 * 1024 * 1024),
         validate_checksums: args.validate,
     };
-
-    match backup(&args.source, &args.destination, Some(options)) {
+ 
+    match backup_with_options(&args.source, &args.destination, Some(options)) {
         Ok(set_name) => println!("Backup successful: created set {}", set_name),
         Err(e) => {
             eprintln!("Backup failed: {}", e);
             process::exit(1);
         }
     }
-       // Your application code here
-       log::info!("Application started");
+
+    log::info!("Application started");
 }

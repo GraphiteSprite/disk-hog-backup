@@ -9,6 +9,7 @@ use log::info;
 
 use crate::backup_sets::backup_set::create_empty_set;
 use crate::dhcopy::copy_folder::copy_folder;
+
 #[derive(Debug)]
 pub struct BackupOptions {
     pub max_space: Option<u64>,
@@ -35,27 +36,40 @@ fn calculate_checksum(path: &Path) -> io::Result<u64> {
 // Updated backup function with options
 pub fn backup_with_options(source: &str, dest: &str, options: Option<BackupOptions>) -> io::Result<String> {
     let options = options.unwrap_or_default(); // Use default options if none provided
+    log::info!("Starting backup from '{}' to '{}' with options: {:?}", source, dest, options);
 
     // Ensure destination directory exists
     fs::create_dir_all(dest)?;
+    log::info!("Created destination directory: {}", dest);
+
     let set_name = create_empty_set(dest, || Utc::now())?;
+    log::info!("Created backup set '{}' in '{}'", set_name, dest);
+
+    // Ensure the backup folder for this set exists
+    let dest_folder = Path::new(dest).join(&set_name);
+    if !dest_folder.exists() {
+        log::info!("Creating backup folder: {:?}", dest_folder);
+        fs::create_dir_all(&dest_folder)?;
+    }
 
     // Manage backup space if max_space is set
     if let Some(max_space) = options.max_space {
         manage_backup_space(dest, max_space)?;
     }
 
-    let dest_folder = Path::new(dest).join(&set_name);
     info!("Backing up {} into {:?}", source, dest_folder);  // Corrected usage of log::info!
+    let dest_folder = Path::new(dest).join(&set_name);
 
     // Copy source folder to destination
     copy_folder(source, dest_folder.to_str().unwrap())?;
 
     // Validate checksums if the option is enabled
     if options.validate_checksums {
+        log::info!("Starting checksum validation...");
         for entry in fs::read_dir(source)? {
             let entry = entry?;
             if entry.path().is_file() {
+                log::info!("Validating checksum for: {}", entry.path().display());
                 let source_checksum = calculate_checksum(&entry.path())?;
                 let dest_checksum = calculate_checksum(&dest_folder.join(entry.file_name()))?;
                 assert_eq!(
@@ -65,7 +79,9 @@ pub fn backup_with_options(source: &str, dest: &str, options: Option<BackupOptio
                 );
             }
         }
-    }
+    } 
+    
+    log::info!("Backup completed successfully to set '{}'", set_name);
 
     Ok(set_name)
 }

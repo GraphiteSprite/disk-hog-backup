@@ -2,7 +2,6 @@ use assert_cmd::Command;
 use tempfile::tempdir;
 use std::fs;
 use std::io::Write;
-use std::path::Path;
 
 #[test]
 fn test_disk_hog_backup_end_to_end() -> Result<(), Box<dyn std::error::Error>> {
