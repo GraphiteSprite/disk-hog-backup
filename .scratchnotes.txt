@@ -1,0 +1,7 @@
+The actions we took were:
+Copy test_helpers file into tests folder and updated tests/common/mod.rs
+Use the same structure for the binary runner as in the linked gitopolis end to end test
+Copied const and functions to create temp source and destination folders
+To verify the folder path of the backup destination, we extracted the destination folder name as it was being created and used that to asset that the folder exists
+Still TODO: assert the files exists
+Options: move the method to extract folder path and file names to a separate function in test/common/test_helpers
